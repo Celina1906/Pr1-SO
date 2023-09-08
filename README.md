@@ -2,7 +2,7 @@
 
 ##To Do List:
 
-- [x] Crear Repositorio
+- [x] Crear Repositorio 
 - [ ] Documentación
 - [ ] Leer Archivos
 - [ ] Crear expresión regular
