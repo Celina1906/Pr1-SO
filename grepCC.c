@@ -84,12 +84,31 @@ int flagFin = 0;
 
 
 int main(int argc, char *argv[]) {
+    /* Revisar parametros */
+    if (argc < 3) {
+        fprintf(stderr, "Uso: %s 'expresion_regular' archivo1 archivo2 ...\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+    /* Revisar parametros */
 
+    /* Verificar el patron de la expresion regular */ 
+    const char *pattern = argv[1];
+    regex_t regex;
+    int reti;
+
+    reti = regcomp(&regex, pattern, 0);
+    if (reti) {
+        fprintf(stderr, "No se pudo compilar la expresión regular\n");
+        exit(EXIT_FAILURE);
+    }
+    /* Verificar el patron de la expresion regular */ 
+
+    /* Crear Pool de Hijos */
     int cantidadHijos=3;
     int status, i;
     pid_t pids[3];
 
-    
+    //Necesario para enviar mensajes
     key_t msqkey = 999;
     int msqid = msgget(msqkey, IPC_CREAT | S_IRUSR | S_IWUSR);
 
@@ -97,7 +116,7 @@ int main(int argc, char *argv[]) {
         pids[i] = fork();
         if (pids[i]==0) {
             while (1){
-                
+                // Falta agregar las acciones a realizar segun el mensaje recibido
                 if(msgrcv(msqid, &msg, sizeof(struct message) , 1, 0)){
                     printf("Me llego un mensaje de despertar: %d\n",getpid() );  
                 }
@@ -108,7 +127,6 @@ int main(int argc, char *argv[]) {
                     printf("Me llego un mensaje de regex: %d\n",getpid() );
                 }
                 
-                
             }
             sleep(1);
             exit(0);
@@ -116,8 +134,18 @@ int main(int argc, char *argv[]) {
     }    
 
     sleep(1); //esperar que los hijos entren al ciclo infinito
+    /* Crear Pool de Hijos */
 
 
+    /* LECTURA DE ARCHIVO(S) */
+
+        /*  
+    long int posicion = 10;
+    for (int i = 2; i < argc; i++) {
+        grep(pattern, argv[i], posicion );
+    }
+    */
+   
     //for (i = 0; i < cantidadHijos; i++) {
         //printf("Hola proceso a %d \n", pids[i]);
         //msg.type = 1;
@@ -231,23 +259,12 @@ int main(int argc, char *argv[]) {
     }
         
         sleep(1);
-        
+    /* LECTURA DE ARCHIVO(S) */
+
+    /* Acabar con procesos hijos*/
         kill(pids[i], SIGKILL);
         wait(&status);
-    
-
-    
-
-/*    if (argc < 3) {
-        fprintf(stderr, "Uso: %s 'expresion_regular' archivo1 archivo2 ...\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-
-    const char *pattern = argv[1];
-    long int posicion = 10;
-    for (int i = 2; i < argc; i++) {
-        grep(pattern, argv[i], posicion );
-    }*/
+    /* Acabar con procesos hijos*/
 
     return EXIT_SUCCESS;
 }
