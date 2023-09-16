@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <stdbool.h>
 #include <sys/msg.h>
 
 struct buffer {
@@ -14,7 +15,7 @@ struct buffer {
 
 struct message {
   long type;
-  int numeroAleatorio1;
+  int posicion;
   int numeroAleatorio2;
 } msg;
 
@@ -105,7 +106,7 @@ int main(int argc, char *argv[]) {
 
     /* Crear Pool de Hijos */
     int cantidadHijos=3;
-    int status, i;
+    int status, i, cont;
     pid_t pids[3];
 
     //Necesario para enviar mensajes
@@ -121,7 +122,8 @@ int main(int argc, char *argv[]) {
                     printf("Me llego un mensaje de despertar: %d\n",getpid() );  
                 }
                  if(msgrcv(msqid, &msg, sizeof(struct message) , 2, 0)){
-                    printf("Me llego un mensaje de leer: %d\n",getpid() );
+                    printf("Me llego un mensaje de leer en posicion: %d\n", getpid());
+                    flagSleepP0 = 1;
                 }
                 if(msgrcv(msqid, &msg, sizeof(struct message) , 3, 0)){
                     printf("Me llego un mensaje de regex: %d\n",getpid() );
@@ -133,130 +135,179 @@ int main(int argc, char *argv[]) {
         }
     }    
 
-    sleep(1); //esperar que los hijos entren al ciclo infinito
+    sleep(2); //esperar que los hijos entren al ciclo infinito
     /* Crear Pool de Hijos */
 
 
     /* LECTURA DE ARCHIVO(S) */
+    /*
+        FLUJO DE LECTURA DE ARCHIVO(S)
+            For archivo in archivos
+                finArchivo = false
+                if x3 flagSleepP0 == 1
+                    msgsnd( posicion == 0 )
+                while(finArchivo==false){
+                    ~ 1 --> return posicion --> asignar sig
+                        
+                    ~ 2 --> imprimirlo 
+                    if(tipo mensaje == 1){
+                        if x3 flagSleepP0 == 1
+                    }
+                }
 
-        /*  
-    long int posicion = 10;
-    for (int i = 2; i < argc; i++) {
-        grep(pattern, argv[i], posicion );
-    }
-    */
-   
-    //for (i = 0; i < cantidadHijos; i++) {
-        //printf("Hola proceso a %d \n", pids[i]);
-        //msg.type = 1;
-        /*No se especifico el rango para numeros aleatorios por lo que se escogio:
-            0 - 30 para el primer numero
-            0 - 50 para el segundo numero
         */
+    long int posicion = 10;
     i=0;
-    //while (flagFin == 0)
-    while (i<cantidadHijos){
-       if (i==0){ //Segun lo que entiendo este if se deberia ir porque todos los hijos deberian estar ocupados al mismo tiempo
-        printf("Hola proceso a %d \n", pids[i]);
-        if (flagSleepP0 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
+    bool finArchivo;
+    for (int a = 2; a < argc; a++) {
+        // grep(pattern, argv[i], posicion );
+       finArchivo = false;
+       if (flagSleepP1 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
             msg.type = 1;
-            printf("Enviando mensaje de despertar a %d \n", pids[i]);
-            msg.numeroAleatorio1 = 58;
-            msg.numeroAleatorio1 = rand() % 30;
+            msg.posicion = 0;
             msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
-            flagLeerP0 = 1;
-       }
-        if (flagLeerP0 == 1){
+            sleep(1);
+            // flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
+            // flagLeerP0 = 1;
+        }
+        else if (flagSleepP0 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
             msg.type = 2;
-            printf("Enviando mensaje de leer a %d \n", pids[i]);
-            msg.numeroAleatorio1 = 58;
-            msg.numeroAleatorio1 = rand() % 30;
+            printf("Enviando mensaje de despertar a 2 %d \n", pids[i]);
+            msg.posicion = 0;
+            
             msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            flagSleepP0 = 0;
-            flagLeerP0 = 0;
-            flagRegexP0 = 1;
+            // flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
+            // flagLeerP0 = 1;
         }
-        if (flagRegexP0 == 1){
-            msg.type = 3;
-            printf("Enviando mensaje de regex a %d \n", pids[i]);
-            msg.numeroAleatorio1 = 58;
-            msg.numeroAleatorio1 = rand() % 30;
-            msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            flagSleepP0 = 1;
-            flagLeerP0 = 0;
-            flagRegexP0 = 0;
-        }
-       }
-       if (i==1){//Segun lo que entiendo este if se deberia ir 
-        printf("Hola proceso a %d \n", pids[i]);
-        if (flagSleepP1 == 1){
+        else if (flagSleepP2 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
             msg.type = 1;
-            printf("Enviando mensaje de despertar a %d \n", pids[i]);
-            msg.numeroAleatorio1 = 58;
-            msg.numeroAleatorio1 = rand() % 30;
+            printf("Enviando mensaje de despertar a 3 %d \n", pids[i]);
+            msg.posicion = 0;
             msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            flagSleepP1 = 0;
-            flagLeerP1 = 1;
-       }
-        if (flagLeerP1 == 1){
-            msg.type = 2;
-            printf("Enviando mensaje de leer a %d \n", pids[i]);
-            msg.numeroAleatorio1 = 58;
-            msg.numeroAleatorio1 = rand() % 30;
-            msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            flagSleepP1 = 0;
-            flagLeerP1 = 0;
-            flagRegexP1 = 1;
+            // flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
+            // flagLeerP0 = 1;
         }
-        if (flagRegexP1 == 1){
-            msg.type = 3;
-            printf("Enviando mensaje de regex a %d \n", pids[i]);
-            msg.numeroAleatorio1 = 58;
-            msg.numeroAleatorio1 = rand() % 30;
-            msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            flagSleepP1 = 1;
-            flagLeerP1 = 0;
-            flagRegexP1 = 0;
-        }
-       }
-       if (i==2){//Segun lo que entiendo este if se deberia ir 
-        printf("Hola proceso a %d \n", pids[i]);
-        if (flagSleepP2 == 1){
-            msg.type = 1;
-            printf("Enviando mensaje de despertar a %d \n", pids[i]);
-            msg.numeroAleatorio1 = 58;
-            msg.numeroAleatorio1 = rand() % 30;
-            msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            flagSleepP2 = 0;
-            flagLeerP2 = 1;
-       }
-        if (flagLeerP2 == 1){
-            msg.type = 2;
-            printf("Enviando mensaje de leer a %d \n", pids[i]);
-            msg.numeroAleatorio1 = 58;
-            msg.numeroAleatorio1 = rand() % 30;
-            msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            flagSleepP2 = 0;
-            flagLeerP2 = 0;
-            flagRegexP2 = 1;
-        }
-        if (flagRegexP2 == 1){
-            msg.type = 3;
-            printf("Enviando mensaje de regex a %d \n", pids[i]);
-            msg.numeroAleatorio1 = 58;
-            msg.numeroAleatorio1 = rand() % 30;
-            msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            flagSleepP2 = 1;
-            flagLeerP2 = 0;
-            flagRegexP2 = 0;
-        }
-       }
-       i++;
-       /*if (i==3){
-        i=0;
-       }*/
+        while (finArchivo==false){
+            if(msgrcv(msqid, &msg, sizeof(struct message) , 1, 0)){ 
+                /* Asignar Siguiente */
+                // printf("Me llego un mensaje de despertar: %d\n",getpid() );  
+                }
+
+            if(msgrcv(msqid, &msg, sizeof(struct message) , 2, 0)){
+                /* Termino archivo*/
+                finArchivo = true;
+                printf("Me llego un mensaje de leer: %d\n",getpid() );
+            }
+            // if(msgrcv(msqid, &msg, sizeof(struct message) , 3, 0)){
+            //     /*Imprimir resultado*/
+            //     printf("Me llego un mensaje de regex: %d\n",getpid() );
+            // }
+
+            // if (i==0){ //Segun lo que entiendo este if se deberia ir porque todos los hijos deberian estar ocupados al mismo tiempo
+            //     printf("Hola proceso a %d \n", pids[i]);
+            //     if (flagSleepP0 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
+            //         msg.type = 1;
+            //         printf("Enviando mensaje de despertar a %d \n", pids[i]);
+            //         msg.posicion = 58;
+            //         msg.posicion = rand() % 30;
+            //         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+            //         flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
+            //         flagLeerP0 = 1;
+            // }
+            //     if (flagLeerP0 == 1){
+            //         msg.type = 2;
+            //         printf("Enviando mensaje de leer a %d \n", pids[i]);
+            //         msg.posicion = 58;
+            //         msg.posicion = rand() % 30;
+            //         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+            //         flagSleepP0 = 0;
+            //         flagLeerP0 = 0;
+            //         flagRegexP0 = 1;
+            //     }
+            //     if (flagRegexP0 == 1){
+            //         msg.type = 3;
+            //         printf("Enviando mensaje de regex a %d \n", pids[i]);
+            //         msg.posicion = 58;
+            //         msg.posicion = rand() % 30;
+            //         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+            //         flagSleepP0 = 1;
+            //         flagLeerP0 = 0;
+            //         flagRegexP0 = 0;
+            //     }
+            // }
+            // if (i==1){//Segun lo que entiendo este if se deberia ir 
+            //     printf("Hola proceso a %d \n", pids[i]);
+            //     if (flagSleepP1 == 1){
+            //         msg.type = 1;
+            //         printf("Enviando mensaje de despertar a %d \n", pids[i]);
+            //         msg.posicion = 58;
+            //         msg.posicion = rand() % 30;
+            //         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+            //         flagSleepP1 = 0;
+            //         flagLeerP1 = 1;
+            // }
+            //     if (flagLeerP1 == 1){
+            //         msg.type = 2;
+            //         printf("Enviando mensaje de leer a %d \n", pids[i]);
+            //         msg.posicion = 58;
+            //         msg.posicion = rand() % 30;
+            //         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+            //         flagSleepP1 = 0;
+            //         flagLeerP1 = 0;
+            //         flagRegexP1 = 1;
+            //     }
+            //     if (flagRegexP1 == 1){
+            //         msg.type = 3;
+            //         printf("Enviando mensaje de regex a %d \n", pids[i]);
+            //         msg.posicion = 58;
+            //         msg.posicion = rand() % 30;
+            //         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+            //         flagSleepP1 = 1;
+            //         flagLeerP1 = 0;
+            //         flagRegexP1 = 0;
+            //     }
+            // }
+            // if (i==2){//Segun lo que entiendo este if se deberia ir 
+            //     printf("Hola proceso a %d \n", pids[i]);
+            //     if (flagSleepP2 == 1){
+            //         msg.type = 1;
+            //         printf("Enviando mensaje de despertar a %d \n", pids[i]);
+            //         msg.posicion = 58;
+            //         msg.posicion = rand() % 30;
+            //         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+            //         flagSleepP2 = 0;
+            //         flagLeerP2 = 1;
+            // }
+            //     if (flagLeerP2 == 1){
+            //         msg.type = 2;
+            //         printf("Enviando mensaje de leer a %d \n", pids[i]);
+            //         msg.posicion = 58;
+            //         msg.posicion = rand() % 30;
+            //         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+            //         flagSleepP2 = 0;
+            //         flagLeerP2 = 0;
+            //         flagRegexP2 = 1;
+            //     }
+            //     if (flagRegexP2 == 1){
+            //         msg.type = 3;
+            //         printf("Enviando mensaje de regex a %d \n", pids[i]);
+            //         msg.posicion = 58;
+            //         msg.posicion = rand() % 30;
+            //         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+            //         flagSleepP2 = 1;
+            //         flagLeerP2 = 0;
+            //         flagRegexP2 = 0;
+            //     }
+            // }
+            // i++;
+            /*if (i==3){
+                i=0;
+            }*/
+            }
     }
+    
+    //while (flagFin == 0)
+    
         
         sleep(1);
     /* LECTURA DE ARCHIVO(S) */
