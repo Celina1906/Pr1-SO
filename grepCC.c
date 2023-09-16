@@ -85,20 +85,6 @@ int flagFin = 0;
 
 int main(int argc, char *argv[]) {
 
-/*
-    Fork
-
-    PROCESOS HIJOS
-        while(trabajando){
-        - 1 sleep ( espera ) bandera(true)
-        - 2 leer --> posicion --> 3
-        - 3 regex --> resultado --> 1
-        }
-
-    Matar Hijos
-
-
-*/
     int cantidadHijos=3;
     int status, i;
     pid_t pids[3];
@@ -113,39 +99,13 @@ int main(int argc, char *argv[]) {
             while (1){
                 
                 if(msgrcv(msqid, &msg, sizeof(struct message) , 1, 0)){
-                    //printf ("Hijo %d corriendo ...\n", getpid());
-                    //printf ("Se empezara a despertar %d\n", getpid());
-                    printf("Me llego un mensaje de despertar: %d\n",getpid() );
-                    //printf("Me llego un mensaje");
-                    //printf ("Se empezara a leer");
-                    // mensaje 2 --> lectura = false
-                    // mensaje 3 --> regex = false
-                    // true
-                    
+                    printf("Me llego un mensaje de despertar: %d\n",getpid() );  
                 }
                  if(msgrcv(msqid, &msg, sizeof(struct message) , 2, 0)){
-                    //printf ("Hijo %d corriendo ...\n", getpid());
                     printf("Me llego un mensaje de leer: %d\n",getpid() );
-                    //printf ("Se empezara a leer\n");
-                    //printf("Me llego un mensaje: %i , %i\n, ", msg.numeroAleatorio1, msg.numeroAleatorio2);
-                    //printf("Me llego un mensaje");
-                    //printf ("Se empezara a leer");
-                    // mensaje 2 --> lectura = false
-                    // mensaje 3 --> regex = false
-                    // true
-                    
                 }
                 if(msgrcv(msqid, &msg, sizeof(struct message) , 3, 0)){
-                    //printf ("Hijo %d corriendo ...\n", getpid());
-                    //printf ("Se empezara a hacer el regex\n");
                     printf("Me llego un mensaje de regex: %d\n",getpid() );
-                    //printf("Me llego un mensaje: %i , %i\n", msg.numeroAleatorio1, msg.numeroAleatorio2);
-                    //printf("Me llego un mensaje");
-                    //printf ("Se empezara a leer");
-                    // mensaje 2 --> lectura = false
-                    // mensaje 3 --> regex = false
-                    // true
-                    
                 }
                 
                 
@@ -158,8 +118,6 @@ int main(int argc, char *argv[]) {
     sleep(1); //esperar que los hijos entren al ciclo infinito
 
 
-
-    
     //for (i = 0; i < cantidadHijos; i++) {
         //printf("Hola proceso a %d \n", pids[i]);
         //msg.type = 1;
