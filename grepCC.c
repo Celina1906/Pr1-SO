@@ -15,8 +15,10 @@ struct buffer {
 
 struct message {
   long type;
-  int posicion;
+  long int posicion;
   int numeroProceso;
+  int numeroArchivo;
+  struct buffer buffer;
 } msg;
 
 int flagSleepP0 = 1;
@@ -30,6 +32,51 @@ int flagLeerP2 = 0;
 int flagRegexP2 = 0;
 
 int flagFin = 0;
+
+void leer( const char *filename, long int posicion) {
+    printf("leer");
+    FILE *file = fopen(filename, "r");
+    struct message msg;
+    if (file == NULL) {
+        fprintf(stderr, "No se pudo abrir el archivo '%s'\n", filename);
+        exit(EXIT_FAILURE);
+    }
+     if (fseek(file, posicion, SEEK_SET) != 0) {
+        fprintf(stderr, "No se pudo establecer la posición de lectura\n");
+        exit(EXIT_FAILURE);
+    }
+    msg.type = 2;
+    memset(msg.buffer.data, 0, sizeof(msg.buffer.data)); // Inicializa el buffer con ceros
+
+    // Lee el archivo carácter por carácter
+    char caracter;
+    int indice = 0;
+    while ((caracter = fgetc(file)) != EOF) {
+        if (caracter == '\n') {
+            msg.type = 1;
+            break;
+        }
+        
+        msg.buffer.data[indice] = caracter;
+        indice++;
+
+        // Verifica si el buffer se llena
+        if (indice >= sizeof(msg.buffer.data) - 1) {
+            perror("Buffer de línea lleno");
+            msg.type = 1;
+            break;
+        }
+    }
+    msg.posicion = indice;
+    fclose(file);
+    
+
+}
+
+void revisionExpresion(const char *pattern) {
+
+}
+
 
 
 // void grep(const char *pattern, const char *filename, long int posicion) {
@@ -86,12 +133,14 @@ int flagFin = 0;
 
 int main(int argc, char *argv[]) {
     /* Revisar parametros */
+    
+    printf("revision");
     if (argc < 3) {
         fprintf(stderr, "Uso: %s 'expresion_regular' archivo1 archivo2 ...\n", argv[0]);
         return EXIT_FAILURE;
     }
     /* Revisar parametros */
-
+    
     /* Verificar el patron de la expresion regular */ 
     const char *pattern = argv[1];
     regex_t regex;
@@ -103,16 +152,17 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
     /* Verificar el patron de la expresion regular */ 
-
+    printf("patron");
     /* Crear Pool de Hijos */
     int cantidadHijos=3;
-    int status, i, cont;
+    int status, i;
+    long int posicionFinal;
     pid_t pids[3];
 
     //Necesario para enviar mensajes
     key_t msqkey = 999;
     int msqid = msgget(msqkey, IPC_CREAT | S_IRUSR | S_IWUSR);
-
+    printf("antes pool");
     for (i=0; i<cantidadHijos; i++) {
         pids[i] = fork();
         if (pids[i]==0) {
@@ -122,8 +172,11 @@ int main(int argc, char *argv[]) {
                     printf("Me llego un mensaje de despertar: %d\n",getpid() );  
                 }
                  if(msgrcv(msqid, &msg, sizeof(struct message) , 2, 0)){
-                    // printf("Me llego un mensaje de leer en posicion: %d\n", getpid());
-                    //leer()
+                    printf("Me llego un mensaje de leer en posicion: %d\n", getpid());
+                    leer(argv[msg.numeroArchivo], msg.posicion);
+                    // sleep(1);
+                    msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+                    // sleep(1);
                     // Devolver posicion
                     // Regex()
                 }
@@ -137,9 +190,9 @@ int main(int argc, char *argv[]) {
         }
     }    
 
-    sleep(2); //esperar que los hijos entren al ciclo infinito
+    sleep(1); //esperar que los hijos entren al ciclo infinito
     /* Crear Pool de Hijos */
-
+    printf("luego pool");
 
     /* LECTURA DE ARCHIVO(S) */
     /*
@@ -161,10 +214,12 @@ int main(int argc, char *argv[]) {
     long int posicion = 10;
     i=0;
     bool finArchivo;
+    printf("Antes de Leer");
     for (int a = 2; a < argc; a++) {
         // grep(pattern, argv[i], posicion );
        finArchivo = false;
        if (flagSleepP0 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
+            printf("P0 Leer");
             msg.type = 2;
             msg.posicion = 0;
             msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
@@ -174,6 +229,7 @@ int main(int argc, char *argv[]) {
         }
         else if (flagSleepP1 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
             msg.type = 2;
+            printf("P1 Leer");
             msg.posicion = 0;
             msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
             sleep(1);
@@ -182,6 +238,7 @@ int main(int argc, char *argv[]) {
         }
         else if (flagSleepP2 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
             msg.type = 2;
+            printf("P2 Leer");
             msg.posicion = 0;
             msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
             sleep(1);
@@ -189,6 +246,7 @@ int main(int argc, char *argv[]) {
             flagLeerP0 = 1;
         }
         while (finArchivo==false){
+            printf("dentro while");
             if(msgrcv(msqid, &msg, sizeof(struct message) , 1, 0)){ 
                 /* Asignar Siguiente */
                 // printf("Me llego un mensaje de despertar: %d\n",getpid() );  
