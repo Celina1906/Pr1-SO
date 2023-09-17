@@ -16,7 +16,7 @@ struct buffer {
 struct message {
   long type;
   int posicion;
-  int numeroAleatorio2;
+  int numeroProceso;
 } msg;
 
 int flagSleepP0 = 1;
@@ -122,8 +122,10 @@ int main(int argc, char *argv[]) {
                     printf("Me llego un mensaje de despertar: %d\n",getpid() );  
                 }
                  if(msgrcv(msqid, &msg, sizeof(struct message) , 2, 0)){
-                    printf("Me llego un mensaje de leer en posicion: %d\n", getpid());
-                    flagSleepP0 = 1;
+                    // printf("Me llego un mensaje de leer en posicion: %d\n", getpid());
+                    //leer()
+                    // Devolver posicion
+                    // Regex()
                 }
                 if(msgrcv(msqid, &msg, sizeof(struct message) , 3, 0)){
                     printf("Me llego un mensaje de regex: %d\n",getpid() );
@@ -162,41 +164,65 @@ int main(int argc, char *argv[]) {
     for (int a = 2; a < argc; a++) {
         // grep(pattern, argv[i], posicion );
        finArchivo = false;
-       if (flagSleepP1 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
-            msg.type = 1;
+       if (flagSleepP0 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
+            msg.type = 2;
             msg.posicion = 0;
             msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
             sleep(1);
-            // flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
-            // flagLeerP0 = 1;
+            flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
+            flagLeerP0 = 1;
         }
-        else if (flagSleepP0 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
+        else if (flagSleepP1 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
             msg.type = 2;
-            printf("Enviando mensaje de despertar a 2 %d \n", pids[i]);
             msg.posicion = 0;
-            
             msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            // flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
-            // flagLeerP0 = 1;
+            sleep(1);
+            flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
+            flagLeerP0 = 1;
         }
         else if (flagSleepP2 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
-            msg.type = 1;
-            printf("Enviando mensaje de despertar a 3 %d \n", pids[i]);
+            msg.type = 2;
             msg.posicion = 0;
             msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            // flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
-            // flagLeerP0 = 1;
+            sleep(1);
+            flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
+            flagLeerP0 = 1;
         }
         while (finArchivo==false){
             if(msgrcv(msqid, &msg, sizeof(struct message) , 1, 0)){ 
                 /* Asignar Siguiente */
                 // printf("Me llego un mensaje de despertar: %d\n",getpid() );  
+                if (flagSleepP0 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
+                    msg.type = 2;
+                    msg.posicion = 0;
+                    msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+                    sleep(1);
+                    flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
+                    flagLeerP0 = 1;
+                    }
+                else if (flagSleepP1 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
+                    msg.type = 2;
+                    msg.posicion = 0;
+                    msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+                    sleep(1);
+                    flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
+                    flagLeerP0 = 1;
                 }
+                else if (flagSleepP2 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
+                    msg.type = 2;
+                    msg.posicion = 0;
+                    msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+                    sleep(1);
+                    flagSleepP0 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
+                    flagLeerP0 = 1;
+                }
+                
+            }
 
-            if(msgrcv(msqid, &msg, sizeof(struct message) , 2, 0)){
+            else if(msgrcv(msqid, &msg, sizeof(struct message) , 2, 0)){
                 /* Termino archivo*/
                 finArchivo = true;
-                printf("Me llego un mensaje de leer: %d\n",getpid() );
+                printf("Termino lectura de archivos");
             }
             // if(msgrcv(msqid, &msg, sizeof(struct message) , 3, 0)){
             //     /*Imprimir resultado*/
