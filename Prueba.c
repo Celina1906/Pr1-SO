@@ -1,120 +1,193 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <regex.h>
+#include <string.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <sys/wait.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <stdbool.h>
 #include <sys/msg.h>
 
-#define BUFFER_SIZE 8192
-
 struct buffer {
-    char *data;
-    int size;
+    char data[100];
 };
 
 struct message {
-    int type;
-    int pid;
-    struct buffer buffer;
-};
+  long type;
+  long int posicion;
+  int numeroProceso;
+  int numeroArchivo;
+  struct buffer buffer;
+} msg;
+
+int flagSleepP0 = 1;
+int flagLeerP0 = 0;
+int flagRegexP0 = 0;
+int flagSleepP1 = 1;
+int flagLeerP1 = 0;
+int flagRegexP1 = 0;
+int flagSleepP2 = 1;
+int flagLeerP2 = 0;
+int flagRegexP2 = 0;
+
+bool finArchivo = false;
+
+void leer( const char *filename, long int posicion) {
+    printf("leer %li\n", posicion);
+    printf("filename %s\n", filename);
+    memset(msg.buffer.data, 0, sizeof(msg.buffer.data)); // Inicializa el buffer con ceros
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        fprintf(stderr, "No se pudo abrir el archivo '%s'\n", filename);
+        exit(EXIT_FAILURE);
+    }
+     if (fseek(file, posicion, SEEK_SET) != 0) {
+        fprintf(stderr, "No se pudo establecer la posición de lectura\n");
+        exit(EXIT_FAILURE);
+    }
+    msg.type = 2;
+    
+    printf("leer2\n");
+    // Lee el archivo carácter por carácter
+    char caracter;
+    long int indice = 0;
+    while ((caracter = fgetc(file)) != EOF) {
+        if (caracter == '\n') {
+            msg.type = 1;
+            break;
+        }
+     printf("leer3\n");    
+        msg.buffer.data[indice] = caracter;
+        indice++;
+
+        // Verifica si el buffer se llena
+        if (indice >= sizeof(msg.buffer.data) - 1) {
+            perror("Buffer de línea lleno");
+            msg.type = 1;
+            break;
+        }
+    }
+     printf("leer4\n");
+    msg.posicion = ftell(file);
+     printf("leer5\n");
+    // Imprime la línea leída y la posición en el archivo
+    printf("Línea leída: %s\n", msg.buffer.data);
+    
+    fclose(file);
+    printf("close archivo\n");
+
+}
 
 int main(int argc, char *argv[]) {
-    // Validar los argumentos
-    if (argc != 2) {
-        fprintf(stderr, "Uso: %s <expresion_regular>\n", argv[0]);
-        exit(1);
+    /* Revisar parametros */
+    if (argc < 3) {
+        fprintf(stderr, "Uso: %s 'expresion_regular' archivo1 archivo2 ...\n", argv[0]);
+        return EXIT_FAILURE;
     }
-
-    // Crear la expresión regular
-    regex_t re;
-    int ret = regcomp(&re, argv[1], REG_EXTENDED);
-    if (ret != 0) {
-        fprintf(stderr, "Error al compilar la expresión regular: %s\n", regerror(ret, &re, NULL, 0));
-        exit(1);
-    }
-
-    // Abrir el archivo
-    int fd = open(argv[2], O_RDONLY);
-    if (fd < 0) {
-        perror("Error al abrir el archivo");
-        exit(1);
-    }
-
-    // Crear la estructura de datos circular para los buffers
-    struct buffer *buffers = malloc(sizeof(struct buffer) * BUFFER_SIZE);
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        buffers[i].data = malloc(BUFFER_SIZE);
-        buffers[i].size = 0;
-    }
-
-    // Crear la cola de mensajes
-    int qid = msgget(IPC_PRIVATE, IPC_CREAT | 0600);
-    if (qid < 0) {
-        perror("Error al crear la cola de mensajes");
-        exit(1);
-    }
-
-    // Crear los procesos hijos
-    pid_t pids[BUFFER_SIZE];
-    for (int i = 0; i < BUFFER_SIZE; i++) {
+    /* Revisar parametros */
+    /* Crear Pool de Hijos */
+    int cantidadHijos=3;
+    int status, i;
+    long int posicionFinal;
+    pid_t pids[3];
+     //Necesario para enviar mensajes
+    key_t msqkey = 999;
+    int msqid = msgget(msqkey, IPC_CREAT | S_IRUSR | S_IWUSR);
+    for (i = 0; i < cantidadHijos; i++) {
         pids[i] = fork();
         if (pids[i] == 0) {
-            // Código del proceso hijo
-            process_loop(fd, buffers, qid, i);
+            int childNumber = i + 1;
+            while (1) {
+                if (msgrcv(msqid, &msg, sizeof(struct message), childNumber, 0) > 0) {
+                    printf("Hijo %d: Me llegó un mensaje en posición: %ld\n", childNumber, msg.posicion);
+                    printf("Hijo %d: filename num %i\n", childNumber, msg.numeroArchivo);
+                    leer(argv[msg.numeroArchivo], msg.posicion);
+                    printf("despues leer\n");
+                    msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+                    if(childNumber == 1){
+                         flagSleepP0 = 1;
+                     }
+                     else if(childNumber == 2){
+                        flagSleepP1 = 1;
+                     }
+                     else if(childNumber ==3){
+                         flagSleepP2  = 1;
+                     }
+                }
+            }
             exit(0);
         }
     }
 
-    // Iniciar la búsqueda
-    struct message msg;
-    msg.type = 1;
-    msg.pid = getpid();
-    msgsnd(qid, &msg, sizeof(msg), 0);
+    sleep(2); //esperar que los hijos entren al ciclo infinito
+    /* Crear Pool de Hijos */
+    for (int a = 2; a < argc; a++) {
+        //filename=argv[a];
+        // grep(pattern, argv[i], posicion );
+    //    finArchivo = false;
+        int childNumber;
+       if (flagSleepP0 == 1){
+            flagSleepP0 = 0; 
+            flagLeerP0 = 1;
+            childNumber = 1;
+            
+        }
+        else if (flagSleepP1 == 1){ 
+            flagSleepP1 = 0; 
+            flagLeerP1 = 1;
+            childNumber = 2;
+              
+        }
+        else{ 
+            flagSleepP2 = 0;
+            flagLeerP2 = 1;
+            childNumber = 3;
+            
+        }
 
-    // Esperar a que los procesos terminen
-    for (int i = 0; i < BUFFER_SIZE; i++) {
+        msg.type = childNumber;
+        msg.posicion = 0;
+        msg.numeroArchivo = a;
+        msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+
+        while (finArchivo==false){
+            printf("hola\n");
+             if(msgrcv(msqid, &msg, sizeof(struct message) , 1, 0)){ 
+                 printf("dentro if\n");
+                if (flagSleepP0 == 1){
+                    printf("if 0\n");
+                    flagSleepP0 = 0;
+                    flagLeerP0 = 1;
+                    childNumber = 3;
+                    }
+           
+                else if (flagSleepP1 == 1){ 
+                    printf("if 1\n");
+                    flagSleepP1 = 0;
+                    flagLeerP1 = 1;
+                    childNumber = 3;
+                }
+                else if (flagSleepP2 == 1){ 
+                    printf("if 2\n");
+                    flagSleepP2 = 0;
+                    flagLeerP2 = 1;
+                    childNumber = 3;
+                }
+                msg.type = childNumber;
+                msg.numeroArchivo = a;
+                msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+                
+            }
+        }
+        
+    }
+
+    // const char * file = argv[2];
+    // leer(file,0);
+    for (int i = 0; i < cantidadHijos; i++) {
         wait(NULL);
     }
 
-    // Liberar la memoria
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        free(buffers[i].data);
-    }
-    free(buffers);
-
-    // Cerrar la cola de mensajes
-    msgctl(qid, IPC_RMID, NULL);
-
-    // Destruir la expresión regular
-    regfree(&re);
-
-    return 0;
+    return EXIT_SUCCESS;
 }
-
-void process_loop(int fd, struct buffer *buffers, int qid, int pid) {
-    // Recibir el mensaje de inicio
-    struct message msg;
-    msgrcv(qid, &msg, sizeof(msg), 2, 0);
-
-    // Leer el archivo
-    while (1) {
-        // Solicitar un nuevo buffer
-        msg.type = 3;
-        msgsnd(qid, &msg, sizeof(msg), 0);
-
-        // Leer una línea del buffer
-        int size = read(fd, buffers[pid].data, BUFFER_SIZE);
-        if (size == 0) {
-            // Fin del archivo
-            break;
-        }
-
-        // Enviar la línea al padre
-        msg.type = 4;
-        msg.buffer = buffers[pid];
-        msg.buffer.size = size;
-        msgsnd(qid, &msg, sizeof(msg), 0);
-    }

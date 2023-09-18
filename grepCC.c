@@ -167,13 +167,12 @@ int main(int argc, char *argv[]) {
                 if(msgrcv(msqid, &msg, sizeof(struct message) , 1, 0)){
                     printf("Me llego un mensaje de despertar: %d\n",getpid() );  
                 }
-                else if(msgrcv(msqid, &msg, sizeof(struct message) , 2, 0)){
+                else if(msgrcv(msqid, &msg, sizeof(struct message) , 2, 0) == 0){
                     printf("Me llego un mensaje de leer en posicion: %d\n", getpid());
                     //leer(argv[msg.numeroArchivo], msg.posicion);
                     //sleep(1);
-                    /*msg.type = 1;
-                    msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-                    sleep(1);*/
+                    //msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+                    //sleep(1);
                     // Devolver posicion
                     // Regex()
                 }
@@ -242,11 +241,12 @@ int main(int argc, char *argv[]) {
         }
         sleep(1);
         while (finArchivo==false){
-            //printf("dentro while\n");
-            //sleep(1);
-           /*if(msgrcv(msqid, &msg, sizeof(struct message) , 1, 0)){ 
+            printf("dentro while\n");
+            sleep(1);
+           //if(msgrcv(msqid, &msg, sizeof(struct message) , 1, 0)){ 
+            if (1==2){
                 /* Asignar Siguiente */
-                //printf("dentro mensaje\n");
+                printf("dentro mensaje\n");
                 // printf("Me llego un mensaje de despertar: %d\n",getpid() );  
                 /*if (flagSleepP0 == 1){
                     printf("dentro P0\n");//if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
@@ -281,11 +281,9 @@ int main(int argc, char *argv[]) {
                 /*Termino archivo*/
                 /*finArchivo = true;
                 printf("Termino lectura de archivos");*/
-            /*} 
+            } 
            else{
                 printf("no recibí ni mierda\n");
-          
-            }*/ 
             }
     }
     
@@ -302,4 +300,4 @@ int main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS;
     }
-
+}
