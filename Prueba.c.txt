@@ -10,7 +10,7 @@
 #include <sys/msg.h>
 
 struct buffer {
-    char data[100];
+    char data[4000];
 };
 
 struct message {
@@ -31,11 +31,10 @@ int flagSleepP2 = 1;
 int flagLeerP2 = 0;
 int flagRegexP2 = 0;
 
-bool finArchivo = false;
-
 void leer( const char *filename, long int posicion) {
     printf("leer %li\n", posicion);
-    memset(msg.buffer.data, 0, sizeof(msg.buffer.data)); // Inicializa el buffer con ceros
+    printf("filename %s\n", filename);
+    
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
         fprintf(stderr, "No se pudo abrir el archivo '%s'\n", filename);
@@ -45,35 +44,35 @@ void leer( const char *filename, long int posicion) {
         fprintf(stderr, "No se pudo establecer la posición de lectura\n");
         exit(EXIT_FAILURE);
     }
-    msg.type = 4;
-    
+    msg.type = 2;
+    memset(msg.buffer.data, 0, sizeof(msg.buffer.data)); // Inicializa el buffer con ceros
+    printf("leer2\n");
     // Lee el archivo carácter por carácter
     char caracter;
-    long int indice = 0;
+    long int indice = posicion;
     while ((caracter = fgetc(file)) != EOF) {
         if (caracter == '\n') {
-            msg.type = 5;
+            msg.type = 1;
             break;
-        } 
+        }
+     printf("leer3\n");    
         msg.buffer.data[indice] = caracter;
         indice++;
 
         // Verifica si el buffer se llena
         if (indice >= sizeof(msg.buffer.data) - 1) {
             perror("Buffer de línea lleno");
-            msg.type = 5;
+            msg.type = 1;
             break;
         }
     }
-    if ((caracter = fgetc(file)) == EOF){
-        msg.type = 4;
-    }
-    
+     printf("leer4\n");
     msg.posicion = ftell(file);
+     printf("leer5\n");
     // Imprime la línea leída y la posición en el archivo
     printf("Línea leída: %s\n", msg.buffer.data);
-    
     fclose(file);
+    
 
 }
 
@@ -101,22 +100,15 @@ int main(int argc, char *argv[]) {
                     printf("Hijo %d: Me llegó un mensaje en posición: %ld\n", childNumber, msg.posicion);
                     printf("Hijo %d: filename num %i\n", childNumber, msg.numeroArchivo);
                     leer(argv[msg.numeroArchivo], msg.posicion);
-                    printf("despues leer\n");
-                    msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-                    sleep(1);
-                    if(childNumber == 1){
-                         flagSleepP0 = 1;
-                     }
-                     else if(childNumber == 2){
-                        flagSleepP1 = 1;
-                     }
-                     else if(childNumber ==3){
-                         flagSleepP2  = 1;
-                     }
-                }
-                else if(msgrcv(msqid, &msg, sizeof(struct message), 6, 0)){
-                    //printf(msg.type);
-                    printf("type %li", msg.type);
+                    // if(childNumber == 1){
+                    //     flagSleepP0 = 1;
+                    // }
+                    // else if(childNumber == 2){
+                    //     flagSleepP1 = 1;
+                    // }
+                    // else if(childNumber ==3){
+                    //     flagSleepP2  = 1;
+                    // }
                 }
             }
             exit(0);
@@ -130,21 +122,23 @@ int main(int argc, char *argv[]) {
         // grep(pattern, argv[i], posicion );
     //    finArchivo = false;
         int childNumber;
-       if (flagSleepP0 == 1){
+       if (flagSleepP0 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
             flagSleepP0 = 0; 
             flagLeerP0 = 1;
             childNumber = 1;
             
         }
-        else if (flagSleepP1 == 1){ 
-            flagSleepP1 = 0; 
+        else if (flagSleepP1 == 1){ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
+            flagSleepP1 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
             flagLeerP1 = 1;
             childNumber = 2;
-              
+            
+            
         }
-        else{ 
-            flagSleepP2 = 0;
+        else{ //if ((flagSleepP0 == 1 && flagSleepP1 == 0 && flagSleepP2 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 1 && flagSleepP1 == 0) || (flagSleepP0 == 0 && flagSleepP1 == 0 && flagSleepP2 == 1) )
+            flagSleepP2 = 0; //Habria que cambiar esto con las condiciones de arriba para saber cual esta en true y false
             flagLeerP2 = 1;
+            
             childNumber = 3;
             
         }
@@ -153,41 +147,7 @@ int main(int argc, char *argv[]) {
         msg.posicion = 0;
         msg.numeroArchivo = a;
         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-
-        while (finArchivo==false){
-             if(msgrcv(msqid, &msg, sizeof(struct message) , 5, 0)){ 
-                if (flagSleepP0 == 1){
-                    flagSleepP0 = 0;
-                    flagLeerP0 = 1;
-                    childNumber = 1;
-                    }
-           
-                else if (flagSleepP1 == 1){ 
-                    flagSleepP1 = 0;
-                    flagLeerP1 = 1;
-                    childNumber = 2;
-                }
-                else if (flagSleepP2 == 1){ 
-                    flagSleepP2 = 0;
-                    flagLeerP2 = 1;
-                    childNumber = 3;
-                }
-                msg.type = childNumber;
-                msg.numeroArchivo = a;
-                msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-                
-            } else if (msgrcv(msqid, &msg, sizeof(struct message) , 4, 0)){
-                printf("final archivo");
-                finArchivo = true;
-                msg.type = 6;
-                msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-                /* code */
-            }
-            
-        }
-        
     }
-
     // const char * file = argv[2];
     // leer(file,0);
     for (int i = 0; i < cantidadHijos; i++) {
