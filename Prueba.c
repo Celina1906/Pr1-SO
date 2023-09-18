@@ -122,6 +122,7 @@ int main(int argc, char *argv[]) {
 
     sleep(2); //esperar que los hijos entren al ciclo infinito
     /* Crear Pool de Hijos */
+    printf("buenas");
     for (int a = 2; a < argc; a++) {
         //filename=argv[a];
         // grep(pattern, argv[i], posicion );
