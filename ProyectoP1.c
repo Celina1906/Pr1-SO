@@ -33,7 +33,7 @@ void leer( const char *filename, long int posicion) {
         fprintf(stderr, "No se pudo abrir el archivo '%s'\n", filename);
         exit(EXIT_FAILURE);
     }
-     if (fseek(file, posicion, SEEK_SET) != 0) {
+     if (fseek(file, posicion-1, SEEK_SET) != 0) {
         fprintf(stderr, "No se pudo establecer la posición de lectura\n");
         exit(EXIT_FAILURE);
     }
@@ -57,10 +57,8 @@ void leer( const char *filename, long int posicion) {
         }
     }
     if ((caracter = fgetc(file)) == EOF){
-        printf("fin de archivo leer\n");
         msg.tipoAccion = 2;
         //finArchivo = true;
-        printf("hola\n");
     }
     
     msg.posicion = ftell(file);
@@ -92,10 +90,10 @@ int main(int argc, char *argv[]) {
             int childNumber = i + 1;
             while (1) {
                 if (msgrcv(msqid, &msg, sizeof(struct message), childNumber, 0) > 0) { //Revisar proceso hijo
-                    printf("Hijo %d: Me llegó un mensaje en posición: %ld\n", childNumber, msg.posicion);
-                    printf("Hijo %d: filename num %i\n", childNumber, msg.numeroArchivo);
+                        // printf("Hijo %d: Me llegó un mensaje en posición: %ld\n", childNumber, msg.posicion);
+                        // printf("Hijo %d: filename num %i\n", childNumber, msg.numeroArchivo);
                     leer(argv[msg.numeroArchivo], msg.posicion);
-                    printf("despues leer\n");
+                    // printf("despues leer\n");
                     if (msg.tipoAccion == 1){
                         msg.type =4;
                     }
@@ -112,8 +110,8 @@ int main(int argc, char *argv[]) {
                         msg.numeroProceso = 2;
                     }
                     
-                    printf("Tipo accion %i \n", msg.tipoAccion);
-                    printf("Tipo mensaje %li \n", msg.type);
+                    // printf("Tipo accion %i \n", msg.tipoAccion);
+                    // printf("Tipo mensaje %li \n", msg.type);
                     msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
                     sleep(1);
                     
@@ -134,7 +132,7 @@ int main(int argc, char *argv[]) {
     msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
 
     while(1){
-        printf("dentro while");
+        // printf("dentro while");
         msgrcv(msqid, &msg, sizeof(struct message) , 4, 0);
         if(msg.tipoAccion == 1){ 
             
@@ -157,7 +155,7 @@ int main(int argc, char *argv[]) {
         } 
         else if (msg.tipoAccion==2){
             printf("final archivo2\n");
-            printf("fin de archivo2 %d \n", finArchivo);
+            // printf("fin de archivo2 %d \n", finArchivo);
             exit(0);  
         }
         else if(msg.tipoAccion ==3){
@@ -165,76 +163,7 @@ int main(int argc, char *argv[]) {
         }
         
     }
-    
-    // for (int a = 2; a < argc; a++) {
-    //     //filename=argv[a];
-    //     // grep(pattern, argv[i], posicion ); 
-    //     int childNumber;
-    //    if (flagSleepP0 == 1){
-    //         flagSleepP0 = 0; 
-    //         // flagLeerP0 = 1;
-    //         childNumber = 1;
-            
-    //     }
-    //     else if (flagSleepP1 == 1){ 
-    //         flagSleepP1 = 0; 
-    //         // flagLeerP1 = 1;
-    //         childNumber = 2;
-              
-    //     }
-    //     else{ 
-    //         flagSleepP2 = 0;
-    //         // flagLeerP2 = 1;
-    //         childNumber = 3;
-            
-    //     }
 
-    //     msg.type = childNumber;
-    //     msg.posicion = 0;
-    //     msg.numeroArchivo = a;
-    //     msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-
-    //     while (1){
-    //         printf("dentro while");
-    //         msgrcv(msqid, &msg, sizeof(struct message) , 4, 0);
-    //         if(msg.tipoAccion == 1){ 
-    //             if (flagSleepP0 == 1){
-    //                 flagSleepP0 = 0;
-                    
-    //                 childNumber = 1;
-    //                 }
-           
-    //             else if (flagSleepP1 == 1){ 
-    //                 flagSleepP1 = 0;
-                    
-    //                 childNumber = 2;
-    //             }
-    //             else if (flagSleepP2 == 1){ 
-    //                 flagSleepP2 = 0;
-                    
-    //                 childNumber = 3;
-    //             }
-    //             msg.type = childNumber;
-    //             msg.numeroArchivo = a;
-                
-    //                 msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-    //                 printf("fin de archivo tipo2 %d \n", finArchivo);
-    //             sleep(1);
-                
-                
-    //         } 
-    //         else if (msg.tipoAccion==2){
-    //             printf("final archivo2\n");
-    //             printf("fin de archivo2 %d \n", finArchivo);
-    //             break;
-    //         }
-            
-    //     }
-        
-    // }
-
-    // const char * file = argv[2];
-    // leer(file,0);
     for (int i = 0; i < cantidadHijos; i++) {
         wait(NULL);
     }
