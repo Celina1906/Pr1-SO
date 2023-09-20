@@ -90,10 +90,10 @@ int main(int argc, char *argv[]) {
             int childNumber = i + 1;
             while (1) {
                 if (msgrcv(msqid, &msg, sizeof(struct message), childNumber, 0) > 0) { //Revisar proceso hijo
-                        //printf("Hijo %d: Me llegó un mensaje en posición: %ld\n", childNumber, msg.posicion);
-                        // printf("Hijo %d: filename num %i\n", childNumber, msg.numeroArchivo);
+                        printf("Hijo %d: Me llegó un mensaje en posición: %ld\n", childNumber, msg.posicion);
+                         printf("Hijo %d: filename num %i\n", childNumber, msg.numeroArchivo);
                     leer(argv[msg.numeroArchivo], msg.posicion);
-                    // printf("despues leer\n");
+                     printf("despues leer\n");
                     if (msg.tipoAccion == 1){
                         msg.type =4;
                     }
@@ -110,8 +110,8 @@ int main(int argc, char *argv[]) {
                         msg.numeroProceso = 2;
                     }
                     
-                    // printf("Tipo accion %i \n", msg.tipoAccion);
-                    // printf("Tipo mensaje %li \n", msg.type);
+                     printf("Tipo accion %i \n", msg.tipoAccion);
+                     printf("Tipo mensaje %li \n", msg.type);
                     msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
                     sleep(1);
                     
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
     msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
 
     while(1){
-        // printf("dentro while");
+         printf("dentro while");
         msgrcv(msqid, &msg, sizeof(struct message) , 4, 0);
         if(msg.tipoAccion == 1){ 
             
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
         } 
         else if (msg.tipoAccion==2){
             printf("final archivo2\n");
-            // printf("fin de archivo2 %d \n", finArchivo);
+             printf("fin de archivo2 %d \n", finArchivo);
             exit(0);  
         }
         else if(msg.tipoAccion ==3){

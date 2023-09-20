@@ -26,14 +26,14 @@ struct message {
 bool finArchivo = false;
 
 void leer( const char *filename, long int posicion) {
-    printf("leer %li\n", posicion);
+    //printf("leer %li\n", posicion);
     memset(msg.buffer.data, 0, sizeof(msg.buffer.data)); // Inicializa el buffer con ceros
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
         fprintf(stderr, "No se pudo abrir el archivo '%s'\n", filename);
         exit(EXIT_FAILURE);
     }
-     if (fseek(file, posicion-1, SEEK_SET) != 0) {
+     if (fseek(file, posicion, SEEK_SET) != 0) {
         fprintf(stderr, "No se pudo establecer la posición de lectura\n");
         exit(EXIT_FAILURE);
     }
@@ -42,29 +42,28 @@ void leer( const char *filename, long int posicion) {
     char caracter;
     long int indice = 0;
     while ((caracter = fgetc(file)) != EOF) {
-        if (caracter == '\n') {
-            msg.tipoAccion = 1;
-            break;
-        } 
+        //if (caracter == '\n') {
+           // msg.tipoAccion = 1;
+           // break;
+        //} 
         msg.buffer.data[indice] = caracter;
         indice++;
 
         // Verifica si el buffer se llena
         if (indice >= sizeof(msg.buffer.data) - 1) {
-            perror("Buffer de línea lleno");
+            //perror("Buffer de línea lleno");
             msg.tipoAccion = 1;
             break;
         }
     }
     if ((caracter = fgetc(file)) == EOF){
+        printf("Fin de archivo\n");
         msg.tipoAccion = 2;
-        //finArchivo = true;
+       
     }
     
     msg.posicion = ftell(file);
     // Imprime la línea leída y la posición en el archivo
-    printf("Línea leída: %s\n", msg.buffer.data);
-    
     fclose(file);
 
 }
@@ -84,16 +83,18 @@ int main(int argc, char *argv[]) {
      //Necesario para enviar mensajes
     key_t msqkey = 999;
     int msqid = msgget(msqkey, IPC_CREAT | S_IRUSR | S_IWUSR);
+
+    regex_t regex;
+    int reti;
+
+    reti = regcomp(&regex, argv[1], 0);
     for (i = 0; i < cantidadHijos; i++) {
         pids[i] = fork();
         if (pids[i] == 0) {
             int childNumber = i + 1;
             while (1) {
                 if (msgrcv(msqid, &msg, sizeof(struct message), childNumber, 0) > 0) { //Revisar proceso hijo
-                        //printf("Hijo %d: Me llegó un mensaje en posición: %ld\n", childNumber, msg.posicion);
-                        // printf("Hijo %d: filename num %i\n", childNumber, msg.numeroArchivo);
                     leer(argv[msg.numeroArchivo], msg.posicion);
-                    // printf("despues leer\n");
                     if (msg.tipoAccion == 1){
                         msg.type =4;
                     }
@@ -110,10 +111,14 @@ int main(int argc, char *argv[]) {
                         msg.numeroProceso = 2;
                     }
                     
-                    // printf("Tipo accion %i \n", msg.tipoAccion);
-                    // printf("Tipo mensaje %li \n", msg.type);
                     msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-                    sleep(1);
+            
+                    if (regexec(&regex, msg.buffer.data, 0, NULL, 0) == 0) {
+                        msg.tipoAccion = 3;
+                        msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
+                    }
+
+
                     
                 }
                 
@@ -132,8 +137,8 @@ int main(int argc, char *argv[]) {
     msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
 
     while(1){
-        // printf("dentro while");
         msgrcv(msqid, &msg, sizeof(struct message) , 4, 0);
+        sleep(1);
         if(msg.tipoAccion == 1){ 
             
             if(msg.numeroProceso == 0){
@@ -154,16 +159,18 @@ int main(int argc, char *argv[]) {
             
         } 
         else if (msg.tipoAccion==2){
-            printf("final archivo2\n");
-            // printf("fin de archivo2 %d \n", finArchivo);
             exit(0);  
+            // return 0;
+
+            
         }
         else if(msg.tipoAccion ==3){
-            printf("imprimir resultado \n");
+            printf("%s\n", msg.buffer.data);
         }
         
     }
-
+    
+ 
     for (int i = 0; i < cantidadHijos; i++) {
         wait(NULL);
     }
