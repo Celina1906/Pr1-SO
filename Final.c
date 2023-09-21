@@ -10,7 +10,7 @@
 #include <sys/msg.h>
 
 struct buffer {
-    char data[100];
+    char data[8100];
 };
 
 struct message {
