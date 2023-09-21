@@ -76,11 +76,15 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Uso: %s 'expresion_regular' archivo1 archivo2 ...\n", argv[0]);
         return EXIT_FAILURE;
     }
-    /* Revisar parametros */
+    
     regex_t regex;
     int reti;
     reti = regcomp(&regex, argv[1], REG_EXTENDED);
-
+    if (reti) {
+        fprintf(stderr, "No se pudo compilar la expresión regular\n");
+        exit(EXIT_FAILURE);
+    }
+    /* Revisar parametros */
     /* Crear Pool de Hijos */
     int cantidadHijos=3;
     int status, i;
@@ -95,15 +99,7 @@ int main(int argc, char *argv[]) {
                 if (msgrcv(msqid, &msg, sizeof(struct message), childNumber, 0) > 0) { //Revisar proceso hijo
                     leer(argv[msg.numeroArchivo], msg.posicion);
                     msg.type =4; //definimos mensaje type 4 para comunicar con proceso padre.
-                    if (childNumber == 1){
-                        msg.numeroProceso = 0;
-                    }
-                    else if(childNumber ==2){
-                        msg.numeroProceso = 1;
-                    }
-                    else if (childNumber ==3){
-                        msg.numeroProceso = 2;
-                    }
+                    msg.numeroProceso = i;
                     //Se define el numero de proceso para que el padre defina, a partir de quien termino de leer, quien puede continuar con la lectura
                     msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
                     //Se envia un mensaje comunicando la posicion de lectura y quien estuvo leyendo
