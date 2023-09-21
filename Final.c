@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <sys/msg.h>
+#include <time.h>
 
 struct buffer {
     char data[8100];
@@ -57,7 +58,6 @@ void leer( const char *filename, long int posicion) {
         }
     }
     if ((caracter = fgetc(file)) == EOF){
-        printf("Fin de archivo\n");
         msg.tipoAccion = 2;
        
     }
@@ -69,6 +69,9 @@ void leer( const char *filename, long int posicion) {
 }
 
 int main(int argc, char *argv[]) {
+    printf("Inicio del programa\n");
+    printf("\n");
+    time_t begin = time(NULL);
     /* Revisar parametros */
     if (argc < 3) {
         fprintf(stderr, "Uso: %s 'expresion_regular' archivo1 archivo2 ...\n", argv[0]);
@@ -159,6 +162,10 @@ int main(int argc, char *argv[]) {
             
         } 
         else if (msg.tipoAccion==2){
+            time_t end = time(NULL);
+            printf("\n");
+            printf("Fin del programa\n");
+            printf("El programa tomó %ld segundos en ejecutarse.\n", (end - begin));
             exit(0);  
             // return 0;
 
@@ -169,11 +176,14 @@ int main(int argc, char *argv[]) {
         }
         
     }
+
+    
+
     
  
     for (int i = 0; i < cantidadHijos; i++) {
         wait(NULL);
     }
-
+    
     return EXIT_SUCCESS;
 }
