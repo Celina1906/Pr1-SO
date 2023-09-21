@@ -27,7 +27,7 @@ struct message {
 bool finArchivo = false;
 
 void leer( const char *filename, long int posicion) {
-    //printf("leer %li\n", posicion);
+    
     memset(msg.buffer.data, 0, sizeof(msg.buffer.data)); // Inicializa el buffer con ceros
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -35,31 +35,30 @@ void leer( const char *filename, long int posicion) {
         exit(EXIT_FAILURE);
     }
      if (fseek(file, posicion, SEEK_SET) != 0) {
+        //Revisa que la posicion dada como parametro sea valida para iniciar la lectura del proceso
         fprintf(stderr, "No se pudo establecer la posición de lectura\n");
         exit(EXIT_FAILURE);
     }
     
     // Lee el archivo carácter por carácter
     char caracter;
-    long int indice = 0;
+    long int indice = 0; //indice mantiene un conteo de la cantidad de caracteres que va leyendo el proceso
     while ((caracter = fgetc(file)) != EOF) {
-        //if (caracter == '\n') {
-           // msg.tipoAccion = 1;
-           // break;
-        //} 
+        
         msg.buffer.data[indice] = caracter;
         indice++;
 
         // Verifica si el buffer se llena
         if (indice >= sizeof(msg.buffer.data) - 1) {
-            //perror("Buffer de línea lleno");
+            
             msg.tipoAccion = 1;
             break;
         }
     }
     if ((caracter = fgetc(file)) == EOF){
         msg.tipoAccion = 2;
-       
+        //Si el ultimo caracter marca final de archivo se debe de terminar con los procesos y dar por finalizado el programa
+            //Accion que se realizara dentro del proceso padre tras la revision de tipoAccion
     }
     
     msg.posicion = ftell(file);
@@ -78,19 +77,16 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     /* Revisar parametros */
+    regex_t regex;
+    int reti;
+    reti = regcomp(&regex, argv[1], REG_EXTENDED);
+
     /* Crear Pool de Hijos */
     int cantidadHijos=3;
     int status, i;
-    long int posicionFinal;
     pid_t pids[3];
-     //Necesario para enviar mensajes
     key_t msqkey = 999;
     int msqid = msgget(msqkey, IPC_CREAT | S_IRUSR | S_IWUSR);
-
-    regex_t regex;
-    int reti;
-
-    reti = regcomp(&regex, argv[1], 0);
     for (i = 0; i < cantidadHijos; i++) {
         pids[i] = fork();
         if (pids[i] == 0) {
@@ -98,12 +94,7 @@ int main(int argc, char *argv[]) {
             while (1) {
                 if (msgrcv(msqid, &msg, sizeof(struct message), childNumber, 0) > 0) { //Revisar proceso hijo
                     leer(argv[msg.numeroArchivo], msg.posicion);
-                    if (msg.tipoAccion == 1){
-                        msg.type =4;
-                    }
-                    else if(msg.tipoAccion == 2){
-                        msg.type = 4;
-                    }
+                    msg.type =4; //definimos mensaje type 4 para comunicar con proceso padre.
                     if (childNumber == 1){
                         msg.numeroProceso = 0;
                     }
@@ -113,18 +104,15 @@ int main(int argc, char *argv[]) {
                     else if (childNumber ==3){
                         msg.numeroProceso = 2;
                     }
-                    
+                    //Se define el numero de proceso para que el padre defina, a partir de quien termino de leer, quien puede continuar con la lectura
                     msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-            
+                    //Se envia un mensaje comunicando la posicion de lectura y quien estuvo leyendo
                     if (regexec(&regex, msg.buffer.data, 0, NULL, 0) == 0) {
-                        msg.tipoAccion = 3;
+                        //se analiza el segmento leido y si se encuentra una coincidencia con el patron de expresion regular se notifica al padre
+                        msg.tipoAccion = 3; 
                         msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
-                    }
-
-
-                    
+                    }                  
                 }
-                
             }
             exit(0);
         }
@@ -132,16 +120,25 @@ int main(int argc, char *argv[]) {
 
     sleep(2); //esperar que los hijos entren al ciclo infinito
     /* Crear Pool de Hijos */
+
+    /* Proceso Padre */
+    //Inicializa el proceso 0 para comenzar con la lectura
     int childNumber = 1;
     msg.type = childNumber;
     msg.numeroProceso = 0;
     msg.posicion = 0;
-    msg.numeroArchivo = 2; //Posiblemente corregir en parametros
+    msg.numeroArchivo = 2; 
     msgsnd(msqid, (void *)&msg, sizeof(struct message) , IPC_NOWAIT);
 
-    while(1){
+    while(!finArchivo){
         msgrcv(msqid, &msg, sizeof(struct message) , 4, 0);
         sleep(1);
+        /*
+        Tipos de Accion segun mensaje type 4
+            - 1 = Continuar lectura --> No se ha llegado al final del archivo por lo que se debe asignar un proceso para continuar desde la ultima posicion
+            - 2 = Se llego al final del archivo, por lo que se debe de finalizar el proceso y sus hijos.
+            - 3 = Alguno de los procesos hijos encontro una coincidencia con el patron de expresiones regulares y se lo comunica al padre para su impresion
+        */        
         if(msg.tipoAccion == 1){ 
             
             if(msg.numeroProceso == 0){
@@ -166,7 +163,8 @@ int main(int argc, char *argv[]) {
             printf("\n");
             printf("Fin del programa\n");
             printf("El programa tomó %ld segundos en ejecutarse.\n", (end - begin));
-            exit(0);  
+            finArchivo = true;
+            break;  
             // return 0;
 
             
@@ -177,13 +175,12 @@ int main(int argc, char *argv[]) {
         
     }
 
-    
-
-    
- 
     for (int i = 0; i < cantidadHijos; i++) {
-        wait(NULL);
+        //Inicia la accion para finalizar  a los procesos hijos
+        kill(pids[i], SIGKILL);
+        wait(&status);
     }
+    /* Proceso Padre */
     
     return EXIT_SUCCESS;
 }
